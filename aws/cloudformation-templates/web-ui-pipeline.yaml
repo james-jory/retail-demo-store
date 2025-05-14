@@ -37,8 +37,8 @@ Parameters:
     Description: Retail Demo Store source deployment type
     AllowedValues:
       - 'GitHub'
-      - 'CodeCommit'
-    Default: 'CodeCommit'
+      - 'S3'
+    Default: 'S3'
 
   GitHubRepo:
     Type: String
@@ -161,163 +161,17 @@ Parameters:
   BedrockProductPersonalization:
     Type: String
     Description: Flag to enable product personalization in web-ui feature driven by Bedrock. Amazon Bedrock users need to request access to models before they are available for use. To demo Personalised Product Descriptions make sure to enable access to Anthropic's Claude v2 via the Amazon Bedrock Management Console. Check README Notes for more details.
-    Default: 'FALSE'
+    Default: 'No'
 
-  ResourceBucketImages:
+  RoomImagesBucket:
     Type: String
-    Description: >
-      (Leave empty in most cases) only specify if your product images are stored in a different bucket
-
-  ResourceBucketImagesPrefix:
-    Type: String
-    Description: >
-      (Leave empty in most cases) Images bucket prefix only specify if your product images are stored in a different bucket
-
-  SourceImagesPackage:
-    Type: String
-    Description : full url to the images.tar.gz adress
-    Default: https://code.retaildemostore.retail.aws.dev/images.tar.gz
+    Description: S3 Bucket name to contain room images for room makeover demo
 
 Conditions:
   LinkToGitHub: !Equals [ !Ref SourceDeploymentType, 'GitHub' ]
-  LinkToCodeCommit: !Equals [ !Ref SourceDeploymentType, 'CodeCommit' ]
-  CustomResourceBucketImages: !Not [ !Equals [!Ref ResourceBucketImages, ""] ]
+  LinkToS3: !Equals [ !Ref SourceDeploymentType, 'S3' ]
 
 Resources:
-  CopyImagesLambdaFunction:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Description: 'Retail Demo Store deployment utility function that copies catalog images from staging bucket to Web UI bucket'
-      Code:
-        ZipFile: |
-          import boto3
-          import cfnresponse
-          import tarfile
-          import urllib.request
-          import tempfile
-          import os          
-
-          def handler(event, context):
-            print(event)
-
-            response_data = {}
-            response_status = cfnresponse.SUCCESS
-
-            try:
-              source_bucket_name = event['ResourceProperties']['SourceBucket']
-              source_path = event['ResourceProperties']['SourceBucketPath']
-              target_bucket_name = event['ResourceProperties']['TargetBucket']
-              source_images_package = event['ResourceProperties']['SourceImagesPackage']
-
-              if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
-                os.makedirs('/tmp/images', exist_ok = True)
-                filename, _ = urllib.request.urlretrieve( source_images_package , '/tmp/images/images.tar.gz')              
-                print(filename)
-                file = tarfile.open('/tmp/images/images.tar.gz')
-                file.extractall('/tmp/images/')
-                file.close()
-                #remove images.tar.gz
-            
-                os.remove('/tmp/images/images.tar.gz')
-
-                s3 = boto3.resource('s3')
-                target_bucket = s3.Bucket(target_bucket_name)
-            
-                # For all files in tmpdirname
-                for root, dirs, files in os.walk('/tmp/images'):
-                  for filename in files:
-                    local_path = os.path.join(root, filename)
-                    relative_path = os.path.relpath(local_path, '/tmp/images')
-                    s3_path = os.path.join('images/', relative_path)
-                    # Upload file to target bucket
-                    target_bucket.upload_file(local_path, s3_path)
-  
-                response_data['Message'] = "Resource creation succeeded"
-              elif event['RequestType'] == 'Delete':
-                response_data['Message'] = "Resource deletion succeeded"
-
-            except Exception as e:
-              print("Error: " + str(e))
-              response_status = cfnresponse.FAILED
-              response_data['Message'] = "Resource {} failed: {}".format(event['RequestType'], e)
-
-            cfnresponse.send(event, context, response_status, response_data)
-
-      Handler: index.handler
-      Runtime: python3.12
-      EphemeralStorage:
-           Size: 2048
-      Timeout: 900
-      MemorySize: 1024
-      Role: !GetAtt CopyImagesLambdaExecutionRole.Arn
-
-  CustomCopyImagesLambdaFunction:
-    Type: Custom::CopyImagesToWebUI
-    Properties:
-      ServiceToken: !GetAtt CopyImagesLambdaFunction.Arn
-      SourceBucket:
-          !If [
-            CustomResourceBucketImages,
-            !Ref ResourceBucketImages,
-            !Ref ResourceBucket
-          ]
-      SourceBucketPath:
-          !If [
-            CustomResourceBucketImages,
-            !Ref ResourceBucketImagesPrefix,
-            !Ref ResourceBucketRelativePath
-          ]
-      TargetBucket: !Ref WebUIBucketName
-      SourceImagesPackage: !Ref SourceImagesPackage
-
-  CopyImagesLambdaExecutionRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Policies:
-        - PolicyName: LoggingPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: '*'
-        - PolicyName: S3
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Fn::If:
-                - CustomResourceBucketImages
-                - Effect: Allow
-                  Action:
-                    - s3:List*
-                    - s3:GetObject
-                    - s3:PutObject
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:s3:::${ResourceBucketImages}/*
-                    - !Sub arn:${AWS::Partition}:s3:::${ResourceBucketImages}
-                    - !Sub arn:${AWS::Partition}:s3:::${WebUIBucketName}
-                    - !Sub arn:${AWS::Partition}:s3:::${WebUIBucketName}/*
-                - Effect: Allow
-                  Action:
-                    - s3:List*
-                    - s3:GetObject
-                    - s3:PutObject
-                  Resource:
-                    - !Sub arn:${AWS::Partition}:s3:::${ResourceBucket}/*
-                    - !Sub arn:${AWS::Partition}:s3:::${ResourceBucket}
-                    - !Sub arn:${AWS::Partition}:s3:::${WebUIBucketName}
-                    - !Sub arn:${AWS::Partition}:s3:::${WebUIBucketName}/*
 
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -389,14 +243,15 @@ Resources:
                 Action:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuilds
-              - Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:retaildemostore-src'
+              - Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::${ResourceBucket}/*
+                  - !Sub arn:${AWS::Partition}:s3:::${ResourceBucket}
                 Effect: Allow
                 Action:
-                  - "codecommit:GetBranch"
-                  - "codecommit:GetCommit"
-                  - "codecommit:UploadArchive"
-                  - "codecommit:GetUploadArchiveStatus"
-                  - "codecommit:CancelUploadArchive"
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
 
   ArtifactBucket:
     Type: AWS::S3::Bucket
@@ -449,21 +304,7 @@ Resources:
             Value: !Sub ${UserPoolClientId}
           - Name: COGNITO_IDENTITY_POOL_ID
             Value: !Sub ${IdentityPoolId}
-          - Name: PRODUCTS_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: USERS_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: CARTS_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: ORDERS_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: RECOMMENDATIONS_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: LOCATION_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: SEARCH_SERVICE_URL
-            Value: !Ref APIGatewayUrl
-          - Name: VIDEOS_SERVICE_URL
+          - Name: API_GATEWAY_URL
             Value: !Ref APIGatewayUrl
           - Name: DEPLOYED_REGION
             Value: !Ref AWS::Region
@@ -510,6 +351,8 @@ Resources:
             Value: !Ref FenixXapiKey
           - Name: BEDROCK_PRODUCT_PERSONALIZATION
             Value: !Ref BedrockProductPersonalization
+          - Name: ROOM_IMAGES_BUCKET
+            Value: !Ref RoomImagesBucket
         Image: 'aws/codebuild/amazonlinux2-x86_64-standard:5.0'
         Type: LINUX_CONTAINER
 
@@ -558,8 +401,8 @@ Resources:
                 ProjectName: !Ref CodeBuildProject
               RunOrder: 1
 
-  PipelineCodeCommit:
-    Condition: LinkToCodeCommit
+  PipelineS3:
+    Condition: LinkToS3
     Type: AWS::CodePipeline::Pipeline
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
@@ -578,10 +421,10 @@ Resources:
                 Category: Source
                 Owner: AWS
                 Version: '1'
-                Provider: CodeCommit
+                Provider: S3
               Configuration:
-                RepositoryName: retaildemostore-src
-                BranchName: main
+                S3Bucket: !Ref ResourceBucket
+                S3ObjectKey: !Sub '${ResourceBucketRelativePath}source/retaildemostore-source.zip'
                 PollForSourceChanges: false
               OutputArtifacts:
                 - Name: App
@@ -601,8 +444,9 @@ Resources:
               Configuration:
                 ProjectName: !Ref CodeBuildProject
               RunOrder: 1
+
   EventRole:
-    Condition: LinkToCodeCommit
+    Condition: LinkToS3
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -624,30 +468,26 @@ Resources:
               -
                 Effect: Allow
                 Action: codepipeline:StartPipelineExecution
-                Resource: !Sub 'arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:${PipelineCodeCommit}'
+                Resource: !Join [ '', [ 'arn:aws:codepipeline:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':', !Ref PipelineS3 ] ]
 
   EventRule:
-    Condition: LinkToCodeCommit
+    Condition: LinkToS3
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
         source:
-          - aws.codecommit
+          - aws.s3
         detail-type:
-          - 'CodeCommit Repository State Change'
-        resources:
-          - !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:retaildemostore-src'
+          - 'Object Created'
         detail:
-          event:
-            - referenceCreated
-            - referenceUpdated
-          referenceType:
-            - branch
-          referenceName:
-            - main
+          bucket:
+            name:
+              - !Ref ResourceBucket
+          object:
+            key:
+              - !Sub ${ResourceBucketRelativePath}source/retaildemostore-source.zip
       Targets:
-        -
-          Arn: !Sub 'arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:${PipelineCodeCommit}'
+        - Arn: !Sub 'arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:${PipelineS3}'
           RoleArn: !GetAtt EventRole.Arn
           Id: codepipeline-AppPipeline
 
@@ -656,6 +496,6 @@ Outputs:
     Condition: LinkToGitHub
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${PipelineGitHub}
 
-  PipelineForCodeCommitUrl:
-    Condition: LinkToCodeCommit
-    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${PipelineCodeCommit}
+  PipelineForS3Url:
+    Condition: LinkToS3
+    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${PipelineS3}

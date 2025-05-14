@@ -45,9 +45,6 @@ Parameters:
   PinpointAppId:
     Type: String
 
-  EvidentlyProjectName:
-    Type: String
-
 Conditions:
   UseDefaultGitHubUser: !Equals
       - !Ref GitHubUser
@@ -178,6 +175,7 @@ Resources:
                   - s3:GetObjectVersion
                   - s3:GetBucketVersioning
                   - s3:GetBucketPolicy
+                  - s3:ListBucket
                 Resource:
                   - !Sub arn:aws:s3:::${StackBucketName}/*
                   - !Sub arn:aws:s3:::${StackBucketName}
@@ -264,17 +262,6 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExperimentStrategyTable}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExperimentStrategyTable}/index/*'
-              - Effect: Allow
-                Action:
-                  - evidently:GetFeature
-                  - evidently:EvaluateFeature
-                  - evidently:CreateExperiment
-                  - evidently:StartExperiment
-                  - evidently:StopExperiment
-                Resource:
-                  - !Sub 'arn:aws:evidently:${AWS::Region}:${AWS::AccountId}:project/${EvidentlyProjectName}'
-                  - !Sub 'arn:aws:evidently:${AWS::Region}:${AWS::AccountId}:project/${EvidentlyProjectName}/experiment/*'
-                  - !Sub 'arn:aws:evidently:${AWS::Region}:${AWS::AccountId}:project/${EvidentlyProjectName}/feature/*'
         -
           PolicyName: "4-Messaging"
           PolicyDocument:

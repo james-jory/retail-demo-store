@@ -26,7 +26,7 @@
 <script>
 import AmplifyMap from "@/public/components/AmplifyMap.vue";
 import Location from "@/location/Location";
-import { Auth } from 'aws-amplify';
+import { getCurrentUser, updateUserAttributes } from 'aws-amplify/auth';
 import {RepositoryFactory} from "@/repositories/RepositoryFactory";
 import AmplifyStore from "@/store/store";
 import swal from 'sweetalert';
@@ -57,19 +57,19 @@ export default {
   async created () {
     this.getIncompleteCollectionOrders();
     this.fetchStoreLocation();
-    await this.getCognitoUser();
+    this.getCognitoUser();
     this.fetchCustomerRoute()
         .then(() => {
           this.customerPosition = this.customerRoute[0];
           locationApi.updateDevicePositions([{
-            'DeviceId': this.cognitoUser.username,
+            'DeviceId': this.cognitoUser,
             'Position': this.customerRoute[0]
           }])
         });
   },
   methods: {
     async fetchCustomerRoute() {
-      const customerRouteGeojson = (await LocationRepository.get_customer_route()).data
+      const customerRouteGeojson = await LocationRepository.get_customer_route();
       if (customerRouteGeojson.type === "FeatureCollection") {
         if (customerRouteGeojson.features.length > 1) {
           console.log("Found more than one route in response. Only the first route will be used")
@@ -80,7 +80,7 @@ export default {
       }
     },
     async fetchStoreLocation() {
-      const storeLocationGeojson = (await LocationRepository.get_store_location()).data
+      const storeLocationGeojson = await LocationRepository.get_store_location();
       if (storeLocationGeojson.type === "FeatureCollection") {
         if (storeLocationGeojson.features.length > 1) {
           console.log("Found more than one location in response. Only the first route will be used")
@@ -91,20 +91,20 @@ export default {
       }
     },
     async getCognitoUser() {
-      this.cognitoUser = await Auth.currentAuthenticatedUser()
+      this.cognitoUser = (await getCurrentUser()).username;
     },
     async setCollectionDemoJourney() {
-      await Auth.updateUserAttributes(this.cognitoUser, {
+      await updateUserAttributes({ userAttributes: {
         'custom:demo_journey': 'COLLECTION',
-      })
+      }})
     },
     async setPurchaseDemoJourney() {
-      await Auth.updateUserAttributes(this.cognitoUser, {
+      await updateUserAttributes({ userAttributes: {
         'custom:demo_journey': 'PURCHASE',
-      })
+      }})
     },
     async getIncompleteCollectionOrders() {
-      const { data } = await OrdersRepository.getOrdersByUsername(this.user.username)
+      const data = await OrdersRepository.getOrdersByUsername(this.user.username);
       this.orders = data.filter(order => order.delivery_type === "COLLECTION" && order.delivery_status !== "COMPLETE")
     },
     async createOrder(collectionPhone) {
@@ -174,7 +174,7 @@ export default {
         setTimeout(() => {
           this.customerPosition = location;
           locationApi.updateDevicePositions([{
-            'DeviceId': this.cognitoUser.username,
+            'DeviceId': this.cognitoUser,
             'Position': location
           }]);
           if (journeySteps === index + 1) {

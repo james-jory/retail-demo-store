@@ -35,8 +35,8 @@ Parameters:
     Description: Retail Demo Store source deployment type
     AllowedValues:
       - 'GitHub'
-      - 'CodeCommit'
-    Default: 'CodeCommit'
+      - 'S3'
+    Default: 'S3'
 
   GitHubRepo:
     Type: String
@@ -133,10 +133,6 @@ Parameters:
     Type: String
     Description: Whether to use created IVS streams or those hosted by AWS.
 
-  EvidentlyProjectName:
-    Type: String
-    Description: Evidently project name
-
   LoggingBucketName:
     Type: String
     Description: S3 Bucket For logging
@@ -179,7 +175,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   UsersService:
@@ -212,7 +207,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   CartsService:
@@ -247,7 +241,6 @@ Resources:
         CartsTable: !Ref CartsTable
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   OrdersService:
@@ -280,7 +273,6 @@ Resources:
         OrdersTable: !Ref OrdersTable
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   SearchService:
@@ -313,7 +305,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   LocationService:
@@ -346,7 +337,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   OffersService:
@@ -379,7 +369,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   RecommendationsService:
@@ -414,7 +403,6 @@ Resources:
         DeleteRepositoryLambdaArn: !GetAtt DeleteRepositoryLambdaFunction.Arn
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   VideosService:
@@ -448,7 +436,6 @@ Resources:
         UseDefaultIVSStreams: !If [UseDefaultIVSStreams, true, false]
         WebRootUrl: !Ref WebRootUrl
         ImageRootUrl: !Ref ImageRootUrl
-        EvidentlyProjectName: !Ref EvidentlyProjectName
         LoggingBucketName: !Ref LoggingBucketName
 
   # Pinpoint personalized messaging customization
@@ -464,16 +451,6 @@ Resources:
         OffersServiceDNSName: !GetAtt OffersService.Outputs.ServiceDNSName
         PinpointAppId: !Ref PinpointAppId
         Uid: !Sub ${AWS::StackName}-${AWS::Region}
-        LambdaVpcSecurityGroup: !Ref LambdaVpcSecurityGroup
-        LambdaVpcSubnets: !Ref Subnets
-
-  # Custom resources
-  CustomResources:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/services/ProductsCustom.yaml
-      Parameters:
-        ProductsServiceUrl: !GetAtt ProductsService.Outputs.ServiceUrl
         LambdaVpcSecurityGroup: !Ref LambdaVpcSecurityGroup
         LambdaVpcSubnets: !Ref Subnets
 

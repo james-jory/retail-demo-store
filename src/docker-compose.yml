@@ -65,7 +65,9 @@ services:
       - FLASK_CONFIG
       - COGNITO_USER_POOL_ID
       - COGNITO_USER_POOL_CLIENT_ID
-      - VERIFY_IDENTITY_TOKEN
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN 
     volumes:
       - ~/.aws/:/root/.aws:ro
     build:
@@ -87,7 +89,9 @@ services:
       - OFFERS_SERVICE_HOST
       - OFFERS_SERVICE_PORT
       - AWS_XRAY_DAEMON_ADDRESS=xray:2000
-      - EVIDENTLY_PROJECT_NAME
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
     volumes:
       - ~/.aws/:/root/.aws:ro
     build:

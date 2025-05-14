@@ -1,5 +1,6 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
+Transform: 'AWS::LanguageExtensions'
 
 # Do NOT remove the RETAIL_DS prefix in the template description below!
 Description: >
@@ -34,6 +35,16 @@ Metadata:
           - PinpointEmailFromAddress
           - PinpointEmailFromName
           - PinpointSMSLongCode
+      - Label:
+          default: "Generative AI Optional Integrations"
+        Parameters:
+          - BedrockProductPersonalization
+          - DeployRoomMakeoverDemo
+          - SageMakerEndpointName
+          - EnableSageMakerAutoScaling
+          - SageMakerScalingMinCapacity
+          - SageMakerScalingMaxCapacity
+          - OpenSearchEmbeddingIndex
       - Label:
           default: "Use default IVS streams"
         Parameters:
@@ -74,7 +85,6 @@ Metadata:
         Parameters:
           - CloudfrontCustomDomain
           - ACMCertificateArn
-          - BedrockProductPersonalization
       - Label:
           default: "Fenix Commerce EDD Integration"
         Parameters:
@@ -173,6 +183,14 @@ Metadata:
         default: "Fenix Commerce X-Api-Key"
       BedrockProductPersonalization:
         default: "Enable Amazon Bedrock product personalization"
+      DeployRoomMakeoverDemo:
+        default: "Deploy Room Makeover Demo"
+      EnableSageMakerAutoScaling:
+        default: Enable Auto scaling for SageMaker Asynchronous endpoint
+      SageMakerScalingMinCapacity:
+        default: Minimum capacity for SageMaker endpoint.
+      SageMakerScalingMaxCapacity:
+        default: Maximum capacity for SageMaker endpoint
 
 Parameters:
   ResourceBucket:
@@ -180,23 +198,27 @@ Parameters:
     Description: >
       S3 bucket name where the Retail Demo Store deployment resources are staged (product images, nested CloudFormation templates, source code snapshot,
       notebooks, deployment Lambda code, etc).
+      REQUIRED: If you plan to use S3 for the deployment type (which is the default). The S3 bucket has to have versioning enabled for the pipeline to work
+
 
   ResourceBucketRelativePath:
     Type: String
     Description: >
       Optional path in the Deployment Resources Staging bucket where the deployment resources are stored (e.g. path/path2/).
       Leave blank if resources are at the root of the Staging Resource Bucket. If specified, MUST end with '/'.
+    Default: ''
 
   ResourceBucketImages:
     Type: String
     Description: >
       (Leave empty in most cases) only specify if your product images are stored in a different bucket
+    Default: ''
 
   ResourceBucketImagesPrefix:
     Type: String
     Description: >
       (Leave empty in most cases) Images bucket prefix only specify if your product images are stored in a different bucket
-
+    Default: ''
 
   CreateOpenSearchServiceLinkedRole:
     Type: String
@@ -210,16 +232,17 @@ Parameters:
   SourceDeploymentType:
     Type: String
     Description: >
-      The Retail Demo Store deployment includes a CodePipeline configuration that will build and deploy Retail Demo Store
-      microservices to ECS when a change is detected in the source repository. The source repository for CodePipeline
-      can be configured to use your personal GitHub repository or CodeCommit. Use GitHub if you're actively developing
-      against Retail Demo Store in your own fork. CodeCommit is useful when you just want to get up and going quickly for
-      a demo or evaluation or for workshop scenarios, such as Event Engine, where you want attendees to have their own
-      source repositories provisioned.
+      The Retail Demo Store deployment includes a CodePipeline configuration that will build and deploy Retail Demo Store 
+      microservices to ECS when a change is detected in the source repository. The source repository for CodePipeline can 
+      be configured to use your personal GitHub repository or an S3 bucket. Use GitHub if you're actively developing against 
+      Retail Demo Store in your own fork. S3 is useful when you just want to get up and going quickly for a demo or 
+      evaluation or for workshop scenarios, such as Event Engine, where you want attendees to have their own source 
+      repositories provisioned.
+      REQUIRED: The S3 bucket has to have versioning enabled for the pipeline to work
     AllowedValues:
       - "GitHub"
-      - "CodeCommit"
-    Default: "CodeCommit"
+      - "S3"
+    Default: "S3"
 
   GitHubRepo:
     Type: String
@@ -242,6 +265,7 @@ Parameters:
       If you are linking and deploying from a private fork of the Retail Demo Store repository in your GitHub account, a GitHub Personal
       Access Token is required. Otherwise, leave blank. Be sure that your token has the "repo", "repo:status", and "admin:repo_hook" permission scopes.
     NoEcho: true
+    Default: ''
 
   PreIndexOpenSearch:
     Type: String
@@ -281,6 +305,7 @@ Parameters:
     Description: >
       Email address to use as Reply-To when sending emails from Pinpoint. This parameter is required when 'Auto-Configure Pinpoint'
       is set to 'Yes'.
+    Default: ''
 
   PinpointEmailFromName:
     Type: String
@@ -305,16 +330,19 @@ Parameters:
     Description: >
       A dedicated long code (i.e. a phone number) obtained for Amazon Pinpoint to send and receive messages at. Be sure to enable two way SMS for this long code using Pinpoint. Follow steps 2 and 3 in the Messaging workshop(https://github.com/aws-samples/retail-demo-store/blob/master/workshop/4-Messaging/4.1-Pinpoint.ipynb)
       to get a long code. This parameter only applies when 'Auto-Configure Pinpoint' is set to 'Yes'. Enter the number along with the country code and without any spaces or brackets. For Example: enter "+1XXXXXXXXXX" for a long code based in the United States.
+    Default: ''
 
   AmplitudeApiKey:
     Type: String
     Description: Amplitude API key for integrated product analytics and A/B testing results (optional).
     NoEcho: true
+    Default: ''
 
   OptimizelySdkKey:
     Type: String
     Description: Optimizely SDK key for experimentation (optional).
     NoEcho: true
+    Default: ''
 
   DeployLocationServices:
     Type: String
@@ -338,18 +366,21 @@ Parameters:
       This demonstration store contains an example of signing Amazon Pay payloads for integration with an Amazon Pay sandbox.
       This parameter is the Public Key ID for the Amazon Pay sandbox account being used.
       For more information see "Amazon Pay Integration" under the README file in the amazon-pay-signing subfolder in the repository.
+    Default: ''
 
   AmazonPayStoreId:
     Type: String
     Description: >
       The Store ID of the Amazon Pay sandbox account being used.
       For more information see "Amazon Pay Integration" under the README file in the amazon-pay-signing subfolder in the repository.
+    Default: ''
 
   AmazonPayMerchantId:
     Type: String
     Description: >
       Merchant ID of the Amazon Pay sandbox account being used.
       For more information see "Amazon Pay Integration" under the README file in the amazon-pay-signing subfolder in the repository.
+    Default: ''
 
   AmazonPayPrivateKey:
     Type: String
@@ -358,6 +389,7 @@ Parameters:
       You will need to copy the whole contents of the .pem file into this parameter.
       For more information see "Amazon Pay Integration" under the README file in the amazon-pay-signing subfolder in the repository.
     NoEcho: true
+    Default: ''
 
   AlexaSkillId:
     Type: String
@@ -366,12 +398,14 @@ Parameters:
       of this CloudFormation stack. The back-end Lambda supports the C-Store demo allowing hands-free location
       based searching with Location Service (if enabled), integration with the Retail Demo Store back-end, online recommendations,
       and checkout.
+    Default: ''
 
   AlexaDefaultSandboxEmail:
     Type: String
     Description: >
-      Fallback email address to receive order confirmation emails.  This will be used until the steps are followed to enable Alexa to authenticate with Cognito, 
+      Fallback email address to receive order confirmation emails.  This will be used until the steps are followed to enable Alexa to authenticate with Cognito,
       after which it will be able to retrieve the user's details.
+    Default: ''
 
   IncludeSegmentDependencies:
     Type: String
@@ -387,6 +421,7 @@ Parameters:
     Description: >
       Segment write key for real-time data collection (optional). Be sure the Segment resources are deployed (above) if you specify a write key.
     NoEcho: true
+    Default: ''
 
   IncludemParticleDependencies:
     Type: String
@@ -402,36 +437,42 @@ Parameters:
     Description: >
       mParticle organization ID from your workspace.
     NoEcho: true
+    Default: ''
 
   mParticleApiKey:
     Type: String
     Description: >
       mParticle event API Key for your mParticle tenant.
     NoEcho: true
+    Default: ''
 
   mParticleSecretKey:
     Type: String
     Description: >
       mParticle event API secret key coupled with your API key.
     NoEcho: true
+    Default: ''
 
   mParticleS2SApiKey:
     Type: String
     Description: >
       mParticle server to server API Key for your mParticle tenant.
     NoEcho: true
+    Default: ''
 
   mParticleS2SSecretKey:
     Type: String
     Description: >
       mParticle server to server secret key coupled with your API key.
     NoEcho: true
+    Default: ''
 
   GoogleAnalyticsMeasurementId:
     Type: String
     Description: >
       Google Analytics Measurement Identifier (optional). If specified, the Google Analytics integration in the web application is activated and
       events are sent to the data stream associated with the Measurement ID.
+    Default: ''
 
   ACMCertificateArn:
     Type: String
@@ -498,14 +539,67 @@ Parameters:
     Type: String
     Description: Flag to enable product personalization in web-ui feature driven by Bedrock. Amazon Bedrock users need to request access to models before they are available for use. To demo Personalised Product Descriptions make sure to enable access to Anthropic's Claude v2 via the Amazon Bedrock Management Console. Check README Notes for more details.
     AllowedValues:
-      - 'TRUE'
-      - 'FALSE'
-    Default: 'FALSE'
+      - 'Yes'
+      - 'No'
+    Default: 'No'
 
   SourceImagesPackage:
     Type: String
     Description : Full url to the images.tar.gz address (only change if you plan to upload custom pictures)
     Default: https://code.retaildemostore.retail.aws.dev/images.tar.gz
+
+  DeployRoomMakeoverDemo:
+    Type: String
+    Description: Flag to deploy the Room Makeover demo. Amazon Bedrock users need to request access to models before they are available for use. To demo the Room Makerover functionality make sure to enable access to Anthropic's Claude v3 & Titan Embeddings via the Amazon Bedrock Management Console. Check README Notes for more details.
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Default: 'No'
+
+  EnableSageMakerAutoScaling:
+    Type: String
+    Description: Enable Auto scaling for the SageMaker Asyncronous endpoint
+    AllowedValues:
+      - "Yes"
+      - "No"
+    Default: "Yes"
+
+  SageMakerScalingMaxCapacity:
+    Type: Number
+    Description: Maximum capacity to scale the SageMaker Asyncronous endpoint
+    MinValue: 1
+    Default: 1
+
+  SageMakerScalingMinCapacity:
+    Type: Number
+    Description: SageMaker Asynchronous endpoints can be scaled to zero.  The endpoint will scale up from zero and room requests will resume execution when there is an endpoint to invoke.
+    MinValue: 0
+    Default: 0
+
+  SageMakerEndpointName:
+    Type: String
+    Description: The SageMaker async endpoint name used for image generation
+    Default: controlnet-depth-sdxl
+
+  OpenSearchEmbeddingIndex:
+    Type: String
+    Description: Name of the embedding index
+    Default: embproducts
+
+
+Mappings:
+# Regions that support Amazon Bedrock and the required models of Room Maker demo: Claude 3 Haiku, Titan Multimodal Embeddings G1
+  BedrockRegionMap:
+    us-east-1:
+      SupportsRequiredModels: "Yes"
+    us-west-2:
+      SupportsRequiredModels: "Yes"
+    ap-south-1:
+      SupportsRequiredModels: "Yes"
+    ap-southeast-2:
+      SupportsRequiredModels: "Yes"
+    eu-west-3:
+      SupportsRequiredModels: "Yes"
 
 Conditions:
   DeploySegmentResources: !Equals
@@ -532,6 +626,14 @@ Conditions:
 
   ConditionCustomDomain: !Not
     - !Equals [!Ref CloudfrontCustomDomain, ""]
+
+  RegionSupportsRequiredBedrockModels: !Equals
+    - !FindInMap [BedrockRegionMap, !Ref 'AWS::Region', 'SupportsRequiredModels', DefaultValue: 'No']
+    - 'Yes'
+
+  DeployRoomMakeoverStack: !And
+    - !Equals [!Ref DeployRoomMakeoverDemo, "Yes"]
+    - !Condition RegionSupportsRequiredBedrockModels
 
 Resources:
   # Base Resources
@@ -560,6 +662,9 @@ Resources:
         GitHubUser: !Ref GitHubUser
         GitHubBranch: !Ref GitHubBranch
         ACMCertificateArn: !Ref ACMCertificateArn
+        ResourceBucketImages: !Ref ResourceBucketImages
+        ResourceBucketImagesPrefix: !Ref ResourceBucketImagesPrefix
+        SourceImagesPackage: !Ref SourceImagesPackage
 
   # Services Resources
   Services:
@@ -595,14 +700,18 @@ Resources:
         ParameterOptimizelySdkKey: !GetAtt Base.Outputs.ParameterOptimizelySdkKey
         CleanupBucketLambdaArn: !GetAtt CleanupBucket.Outputs.LambdaFunctionArn
         ParameterIVSVideoChannelMap: !GetAtt Base.Outputs.ParameterIVSVideoChannelMap
-        WebRootUrl: !GetAtt Base.Outputs.WebUICDNURL
+        WebRootUrl: !If
+          - ConditionCustomDomain
+          - !Sub https://${CloudfrontCustomDomain}
+          - !GetAtt Base.Outputs.WebUICDNURL
         UseDefaultIVSStreams: !Ref UseDefaultIVSStreams
-        ImageRootUrl: !Sub
-          - "${RootURL}/images/"
-          - RootURL: !GetAtt Base.Outputs.WebUICDNURL
-        EvidentlyProjectName: !GetAtt Base.Outputs.EvidentlyProjectName
+        ImageRootUrl: !If
+          - ConditionCustomDomain
+          - !Sub https://${CloudfrontCustomDomain}/images/
+          - !Sub ${Base.Outputs.WebUICDNURL}/images/
         LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
         LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
+
 
   # Services Resources
   ApiGateway:
@@ -623,8 +732,8 @@ Resources:
         VpcCidr: !GetAtt Base.Outputs.VpcCidr
         ResourceBucket: !Ref ResourceBucket
         ResourceBucketRelativePath: !Ref ResourceBucketRelativePath
-        CognitoUserPoolId: !GetAtt Base.Outputs.UserPoolId
-        CognitoAppClientId: !GetAtt Base.Outputs.UserPoolClientId
+        CognitoAuthorizedRole: !GetAtt Base.Outputs.CognitoAuthorizedRole
+        CognitoUnAuthorizedRole: !GetAtt Base.Outputs.CognitoUnAuthorizedRole
 
   # Web UI Pipeline
   WebUIPipeline:
@@ -657,7 +766,7 @@ Resources:
         FenixEnabledCheckout: !Ref FenixEnabledCheckout
         FenixXapiKey: !Ref FenixXapiKey
         BedrockProductPersonalization: !Ref BedrockProductPersonalization
-
+        RoomImagesBucket: !If [DeployRoomMakeoverStack, !GetAtt RoomMakeover.Outputs.RoomImagesBucket, '']
         LocationResourceName:
           !If [
             DeployLocationStack,
@@ -682,9 +791,6 @@ Resources:
           - "${RootURL}/images/"
           - RootURL: !GetAtt Base.Outputs.WebUICDNURL
         LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
-        ResourceBucketImages: !Ref ResourceBucketImages
-        ResourceBucketImagesPrefix: !Ref ResourceBucketImagesPrefix
-        SourceImagesPackage: !Ref SourceImagesPackage
 
   # Swagger UI Pipeline
   SwaggerUIPipeline:
@@ -711,6 +817,8 @@ Resources:
         OffersServiceExternalUrl: !GetAtt ApiGateway.Outputs.APIEndpoint
         CleanupBucketLambdaArn: !GetAtt CleanupBucket.Outputs.LambdaFunctionArn
         LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
+        ResourceBucket: !Ref ResourceBucket
+        ResourceBucketRelativePath: !Ref ResourceBucketRelativePath
 
   # Lex personalization function
   ChatbotFunctions:
@@ -743,7 +851,7 @@ Resources:
         OrdersServiceExternalUrl: !GetAtt Services.Outputs.OrdersServiceUrl
         OffersServiceExternalUrl: !GetAtt Services.Outputs.OffersServiceUrl
         UsersServiceExternalUrl: !GetAtt Services.Outputs.UsersServiceUrl
-        WebURL: 
+        WebURL:
           !If [
             ConditionCustomDomain,
             !Sub 'https://${CloudfrontCustomDomain}' ,
@@ -751,6 +859,7 @@ Resources:
           ]
         LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
         LambdaVpcSubnets: !GetAtt Base.Outputs.Subnets
+        CognitoAuthorizedRole: !GetAtt Base.Outputs.CognitoAuthorizedRole
 
   AmazonPay:
     Type: AWS::CloudFormation::Stack
@@ -763,7 +872,12 @@ Resources:
         AmazonPayPublicKeyId: !Ref AmazonPayPublicKeyId
         AmazonPayStoreId: !Ref AmazonPayStoreId
         AmazonPayPrivateKey: !Ref AmazonPayPrivateKey
-        WebURL: !GetAtt Base.Outputs.WebUICDNURL
+        WebURL:
+          !If [
+            ConditionCustomDomain,
+            !Sub 'https://${CloudfrontCustomDomain}' ,
+            !GetAtt Base.Outputs.WebUICDNURL
+          ]
 
   Alexa:
     Type: AWS::CloudFormation::Stack
@@ -802,6 +916,7 @@ Resources:
         PreCreatePersonalizeResources: !Ref PreCreatePersonalizeResources
         Subnet1: !GetAtt Base.Outputs.Subnet1
         Subnet2: !GetAtt Base.Outputs.Subnet2
+        LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
         OpenSearchSecurityGroupId: !GetAtt Base.Outputs.OpenSearchSecurityGroupId
         OpenSearchDomainArn: !GetAtt Base.Outputs.OpenSearchDomainArn
         OpenSearchDomainEndpoint: !GetAtt Base.Outputs.OpenSearchDomainEndpoint
@@ -852,6 +967,48 @@ Resources:
         Uid: !Sub ${AWS::StackName}-${AWS::Region}
         LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
         LambdaVpcSubnets: !GetAtt Base.Outputs.Subnets
+
+  RoomMakeover:
+    Type: AWS::CloudFormation::Stack
+    Condition: DeployRoomMakeoverStack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/room-generator.yaml
+      Parameters:
+        LambdaVpcSecurityGroup: !GetAtt Base.Outputs.PrivateVPCSecurityGroup
+        LambdaVpcSubnets: !GetAtt Base.Outputs.Subnets
+        ResourceBucket: !Ref ResourceBucket
+        ResourceBucketRelativePath: !Ref ResourceBucketRelativePath
+        LoggingBucketName: !GetAtt Base.Outputs.LoggingBucketName
+        CleanupBucketLambdaArn: !GetAtt CleanupBucket.Outputs.LambdaFunctionArn
+        OpenSearchDomainEndpoint: !GetAtt Base.Outputs.OpenSearchDomainEndpoint
+        ApiGatewayId: !GetAtt ApiGateway.Outputs.ApiGatewayId
+        WebUIBucketName: !GetAtt Base.Outputs.WebUIBucketName
+        WebURL: !If
+          - ConditionCustomDomain
+          - !Sub https://${CloudfrontCustomDomain}
+          - !GetAtt Base.Outputs.WebUICDNURL
+        CognitoAuthorizedRole: !GetAtt Base.Outputs.CognitoAuthorizedRole
+        SageMakerEndpointName: !Ref SageMakerEndpointName
+        EnableSageMakerAutoScaling: !Ref EnableSageMakerAutoScaling
+        SageMakerScalingMaxCapacity: !Ref SageMakerScalingMaxCapacity
+        SageMakerScalingMinCapacity: !Ref SageMakerScalingMinCapacity
+        SourceDeploymentType: !Ref SourceDeploymentType
+        GitHubRepo: !Ref GitHubRepo
+        GitHubBranch: !Ref GitHubBranch
+        GitHubToken: !Ref GitHubToken
+        GitHubUser: !Ref GitHubUser
+
+  ApiGatewayDeploy:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - ApiGateway
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/apigateway-deploy.yaml
+      Parameters:
+        ApiGatewayId: !GetAtt ApiGateway.Outputs.ApiGatewayId
+      Tags:
+        - Key: ConditionalDependsOn
+          Value: !If [DeployRoomMakeoverStack, !Ref RoomMakeover, Ignored]
 
 Outputs:
   UserPoolId:
@@ -941,13 +1098,9 @@ Outputs:
   OffersServiceUrl:
     Description: Offers service load balancer URL.
     Value: !GetAtt Services.Outputs.OffersServiceUrl
-  
+
   APIEndpoint:
     Value: !GetAtt ApiGateway.Outputs.APIEndpoint
-
-  EvidentlyProjectName:
-    Description: ARN for the CloudWatch Evidently project
-    Value: !GetAtt Base.Outputs.EvidentlyProjectName
 
   ExportEnvVarScript:
     Description: A script to export all required environment variable for running docker-compose locally, but connecting to Cloud resources. Replace the existing .env file with this output.
@@ -978,9 +1131,6 @@ Outputs:
         OPENSEARCH_DOMAIN_SCHEME=https
         OPENSEARCH_DOMAIN_HOST="${Base.Outputs.OpenSearchDomainEndpoint}"
         OPENSEARCH_DOMAIN_PORT=9200
-      
-        # Evidently
-        EVIDENTLY_PROJECT_NAME="${Base.Outputs.EvidentlyProjectName}"
 
         # Users service
         AWS_REGION=${AWS::Region}
