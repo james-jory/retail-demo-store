@@ -17,7 +17,7 @@ exports.handler = async function (event, context) {
                     '/retaildemostore/webui/mparticle_s2s_api_key',
                     '/retaildemostore/webui/mparticle_s2s_secret_key',
                     '/retaildemostore/personalize/event-tracker-id',
-                    '/retaildemostore/personalize/recommended-for-you-arn'],
+                    '/retaildemostore/personalize/user-personalization-arn'],
             WithDecryption: false
         };
         let responseFromSSM = await SSM.getParameters(params).promise();
@@ -31,7 +31,7 @@ exports.handler = async function (event, context) {
                 var mpApiSecret = param.Value;
             } else if (param.Name === '/retaildemostore/personalize/event-tracker-id') {
                 var personalizeTrackerID = param.Value;
-            } else if (param.Name === '/retaildemostore/personalize/recommended-for-you-arn') {
+            } else if (param.Name === '/retaildemostore/personalize/user-personalization-arn') {
                 var personalizeARN = param.Value;
             }
         }

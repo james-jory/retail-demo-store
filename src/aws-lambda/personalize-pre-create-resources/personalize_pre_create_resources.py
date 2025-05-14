@@ -215,7 +215,6 @@ interactions_schema_offers = {
 dataset_group_confs = [
     {
         'name': dataset_group_name_products,
-        'domain': 'ECOMMERCE',
         'datasets': [
             {
                 'type': 'INTERACTIONS',
@@ -285,35 +284,49 @@ dataset_group_confs = [
                 'paramDescription': 'Retail Demo Store Promotional Filter to Include Promoted Non-CStore Items Arn Parameter'
             }
         ],
-        'recommenders': [
+        'solutions': [
             {
-                'name': 'retaildemostore-recommended-for-you',
-                'recipe': 'arn:aws:personalize:::recipe/aws-ecomm-recommended-for-you',
-                'recommenderConfig': {
+                'name': 'retaildemostore-user-personalization',
+                'recipe': 'arn:aws:personalize:::recipe/aws-user-personalization-v2',
+                'solutionConfig': {
+                    'eventsConfig': {
+                        'eventParametersList': [
+                            {
+                                'eventType': 'Purchase', 
+                                'weight': 1.0
+                            }, 
+                            {
+                                'eventType': 'AddToCart', 
+                                'weight': 0.7
+                            }, 
+                            {
+                                'eventType': 'View', 
+                                'weight': 0.3
+                            }
+                        ]
+                    },
                     'trainingDataConfig': {
                         'excludedDatasetColumns': {
                             'ITEMS': [ 'PRODUCT_NAME', 'PROMOTED' ]
                         }
                     }
                 },
-                'param': '/retaildemostore/personalize/recommended-for-you-arn',
-                'paramDescription': 'Retail Demo Store Recommended For You Campaign/Recommender Arn Parameter'
+                'campaign': {
+                    'name': 'retaildemostore-user-personalization',
+                    'param': '/retaildemostore/personalize/user-personalization-arn',
+                    'paramDescription': 'Retail Demo Store User Personalization Campaign/Recommender Arn Parameter'
+                }
             },
             {
                 'name': 'retaildemostore-popular-items',
-                'recipe': 'arn:aws:personalize:::recipe/aws-ecomm-popular-items-by-views',
-                'recommenderConfig': {
-                    'trainingDataConfig': {
-                        'excludedDatasetColumns': {
-                            'ITEMS': [ 'PRODUCT_NAME', 'PROMOTED' ]
-                        }
-                    }
-                },
-                'param': '/retaildemostore/personalize/popular-items-arn',
-                'paramDescription': 'Retail Demo Store Popular Items Campaign/Recommender Arn Parameter'
-            }
-        ],
-        'solutions': [
+                'recipe': 'arn:aws:personalize:::recipe/aws-user-popularity-count',
+                'eventType': 'View',
+                'campaign': {
+                    'name': 'retaildemostore-popular-items',
+                    'param': '/retaildemostore/personalize/popular-items-arn',
+                    'paramDescription': 'Retail Demo Store Popular Items Campaign/Recommender Arn Parameter'
+                }
+            },
             {
                 'name': 'retaildemostore-related-items',
                 'recipe': 'arn:aws:personalize:::recipe/aws-similar-items',
@@ -336,6 +349,22 @@ dataset_group_confs = [
                 'recipe': 'arn:aws:personalize:::recipe/aws-personalized-ranking',
                 'eventType': 'View',
                 'solutionConfig': {
+                    'eventsConfig': {
+                        'eventParametersList': [
+                            {
+                                'eventType': 'Purchase', 
+                                'weight': 1.0
+                            }, 
+                            {
+                                'eventType': 'AddToCart', 
+                                'weight': 0.7
+                            }, 
+                            {
+                                'eventType': 'View', 
+                                'weight': 0.3
+                            }
+                        ]
+                    },
                     'trainingDataConfig': {
                         'excludedDatasetColumns': {
                             'ITEMS': [ 'PRODUCT_NAME', 'PROMOTED' ]
@@ -377,7 +406,7 @@ if create_deploy_offers_campaign:
         'solutions': [
             {
                 'name': 'retaildemostore-personalized-offers',
-                'recipe': 'arn:aws:personalize:::recipe/aws-user-personalization',
+                'recipe': 'arn:aws:personalize:::recipe/aws-user-personalization-v2',
                 'eventType': 'OfferConverted',
                 'campaign': {
                     'name': 'retaildemostore-personalized-offers',

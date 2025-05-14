@@ -37,6 +37,8 @@ export default {
         case Articles.PERSONALIZED_EMAILS:
           return Services.Pinpoint;
         case Articles.USER_PERSONALIZATION:
+        case Articles.USER_PERSONALIZATION:
+        case Articles.PERSONALIZED_RANKING:
         case Articles.PERSONALIZED_RANKING:
         case Articles.SIMS_RECOMMENDATIONS:
         case Articles.SIMILAR_ITEMS_RECOMMENDATIONS:

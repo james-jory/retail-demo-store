@@ -480,7 +480,7 @@ def recommendations():
             user_id = user_id,
             current_item_id = current_item_id,
             num_results = num_results,
-            default_inference_arn_param_name='/retaildemostore/personalize/recommended-for-you-arn',
+            default_inference_arn_param_name='/retaildemostore/personalize/user-personalization-arn',
             default_filter_arn_param_name=filter_ssm,
             fully_qualify_image_urls = fully_qualify_image_urls,
             promotion = promotion
