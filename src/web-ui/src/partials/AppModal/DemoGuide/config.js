@@ -76,7 +76,7 @@ export const sections = [
   {
     id: Sections.USE_CASES,
     articles: [
-      Articles.ECOMM_RFY,
+      Articles.USER_PERSONALIZATION,
       Articles.ECOMM_POPULAR_BY_VIEWS,
       Articles.PERSONALIZED_RANKING,
       Articles.SIMILAR_ITEMS_RECOMMENDATIONS,
@@ -98,10 +98,10 @@ export const sections = [
       Articles.METRICS_AND_IMPACT,
       Articles.REAL_TIME_PERSONALIZATION,
       Articles.BATCH_RECOMMENDATIONS,
+      Articles.ECOMM_RFY,
       Articles.ECOMM_FBT,
       Articles.ECOMM_POPULAR_BY_PURCHASES,
       Articles.ECOMM_CUSTOMERS_WHO_VIEWED_X,
-      Articles.USER_PERSONALIZATION,
       Articles.SIMS_RECOMMENDATIONS,
       Articles.ML_USER_SEGMENTATION,
     ],

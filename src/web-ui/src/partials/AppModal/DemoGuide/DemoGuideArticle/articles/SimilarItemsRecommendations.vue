@@ -12,10 +12,10 @@
       >
       with
       <a
-        href="https://docs.aws.amazon.com/personalize/latest/dg/personalized-ranking-recipes.html"
+        href="https://docs.aws.amazon.com/personalize/latest/dg/native-recipe-personalized-ranking-v2.html"
         target="_blank"
         rel="noreferrer noopener"
-        >Personalized-Ranking</a
+        >Personalized-Ranking-v2</a
       >
     </template>
 
@@ -28,7 +28,7 @@
     <p>
       This user experience is implemented using the Similar-Items algorithm that considers co-occurrence in interactions data (how often these items appear together across user histories)
       and thematic similarity (what is similar about the items in your catalog) when making recommendations to better quantify similarity for less popular or new items in
-      your catalog. The product detail page in this demo takes it a step further by using the Personalized-Ranking recipe to rerank related items recommendations for each user. This adds a level of
+      your catalog. The product detail page in this demo takes it a step further by using the Personalized-Ranking-v2 recipe to rerank related item recommendations for each user. This adds a level of
       personalization to the user experience.
     </p>
 
