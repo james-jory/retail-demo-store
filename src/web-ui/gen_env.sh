@@ -19,8 +19,6 @@ printf 'VITE_IMAGE_ROOT_URL=%s\n' "$IMAGE_ROOT_URL" >> .env
 printf 'VITE_BOT_NAME=%s\n' "RetailDemoStore" >> .env
 printf 'VITE_BOT_ALIAS=%s\n' "development" >> .env
 printf 'VITE_BOT_REGION=%s\n' "$DEPLOYED_REGION" >> .env
-printf 'VITE_PINPOINT_APP_ID=%s\n' "$PINPOINT_APP_ID" >> .env
-printf 'VITE_PINPOINT_REGION=%s\n' "$DEPLOYED_REGION" >> .env
 printf 'VITE_PERSONALIZE_TRACKING_ID=%s\n' "$PERSONALIZE_TRACKING_ID" >> .env
 printf 'VITE_LOCATION_RESOURCE_NAME=%s\n' "$LOCATION_RESOURCE_NAME" >> .env
 printf 'VITE_LOCATION_NOTIFICATION_URL=%s\n' "$LOCATION_NOTIFICATION_URL" >> .env
@@ -38,9 +36,6 @@ printf 'VITE_GOOGLE_ANALYTICS_ID=%s\n' "$GOOGLE_ANALYTICS_ID" >> .env
 
 printf 'VITE_MPARTICLE_API_KEY=%s\n' "$MPARTICLE_API_KEY" >> .env
 printf 'VITE_MPARTICLE_SECRET_KEY=%s\n' "$MPARTICLE_SECRET_KEY" >> .env
-
-# Layer0
-printf 'VITE_LAYER0_ENABLED=false\n' >> .env
 
 # Fenix Settings variables
 printf 'VITE_FENIX_TENANT_ID=%s\n' "$FENIX_TENANT_ID" >> .env

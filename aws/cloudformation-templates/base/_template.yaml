@@ -121,6 +121,11 @@ Parameters:
     Description : full url to the images.tar.gz adress
     Default: https://code.retaildemostore.retail.aws.dev/images.tar.gz
 
+  PinpointAppId:
+    Type: String
+    Description: Pinpoint is no longer available to new customers.  Defaulting until code and workshops are refactored
+    Default: ""
+
 Resources:
   # Authentication
   Authentication:
@@ -129,7 +134,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/authentication.yaml
       Parameters:
         AuthName: !Sub ${ParentStackName}-${AWS::Region}
-        PinpointAppId: !GetAtt Pinpoint.Outputs.PinpointAppId
+        PinpointAppId: !Ref PinpointAppId
         LocationResourcePrefix: !Ref LocationResourcePrefix
 
   # Buckets
@@ -154,9 +159,10 @@ Resources:
         StackBucketName: !GetAtt Buckets.Outputs.StackBucketName
         Uid: !Sub ${ParentStackName}-${AWS::Region}
         UserPoolId: !GetAtt Authentication.Outputs.UserPoolId
-        PinpointAppId: !GetAtt Pinpoint.Outputs.PinpointAppId
+        PinpointAppId: !Ref PinpointAppId
         GitHubUser: !Ref GitHubUser
         GitHubBranch: !Ref GitHubBranch
+        ProductsCollectionArn: !GetAtt OpenSearch.Outputs.CollectionArn
 
   # Tables
   Tables:
@@ -198,8 +204,8 @@ Resources:
     Condition: CreateOpenSearchServiceLinkedRole
     Type: AWS::IAM::ServiceLinkedRole
     Properties:
-      AWSServiceName: opensearchservice.amazonaws.com
-      Description: "Role for OpenSearch to access resources in VPC"
+      AWSServiceName: observability.aoss.amazonaws.com
+      Description: "Role for OpenSearch to put metrics in CloudWatch"
 
   OpenSearchRoleWaitHandle:
     Condition: CreateOpenSearchServiceLinkedRole
@@ -227,7 +233,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/opensearch.yaml
       Parameters:
         VpcId: !GetAtt VPC.Outputs.VpcId
-        Subnet1: !GetAtt VPC.Outputs.Subnet1
+        PrivateSubnets: !GetAtt VPC.Outputs.Subnets
 
   # SSM Parameters
   SSMParameters:
@@ -249,10 +255,10 @@ Resources:
         GoogleAnalyticsMeasurementId: !Ref GoogleAnalyticsMeasurementId
 
   # Pinpoint Resources
-  Pinpoint:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/pinpoint.yaml
+  # Pinpoint:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: !Sub https://s3.amazonaws.com/${ResourceBucket}/${ResourceBucketRelativePath}cloudformation-templates/base/pinpoint.yaml
 
   # CloudFront CDN
   CloudFront:
@@ -352,13 +358,13 @@ Outputs:
     Description: Service Discovery Namespace.
     Value: !GetAtt ServiceDiscovery.Outputs.ServiceDiscoveryNamespace
 
-  OpenSearchDomainEndpoint:
-    Description: OpenSearch Domain
-    Value: !GetAtt OpenSearch.Outputs.DomainEndpoint
+  OpenSearchCollectionEndpoint:
+    Description: OpenSearch Collection Endpoint
+    Value: !GetAtt OpenSearch.Outputs.CollectionEndpoint
 
-  OpenSearchDomainArn:
-    Description: OpenSearch Domain
-    Value: !GetAtt OpenSearch.Outputs.DomainArn
+  OpenSearchCollectionArn:
+    Description: OpenSearch Collection Arn
+    Value: !GetAtt OpenSearch.Outputs.CollectionArn
 
   OpenSearchSecurityGroupId:
     Description: OpenSearch Security Group Id
@@ -366,7 +372,7 @@ Outputs:
 
   PinpointAppId:
     Description: Pinpoint App Id
-    Value: !GetAtt Pinpoint.Outputs.PinpointAppId
+    Value: !Ref PinpointAppId
 
   PinpointSMSLongCode:
     Description: Pinpoint SMS Long code for two way SMS
