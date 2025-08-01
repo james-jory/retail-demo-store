@@ -66,6 +66,7 @@ IN_USERS_FILENAMES = ["src/users/src/users-service/data/users.json.gz",
 PROGRESS_MONITOR_SECONDS_UPDATE = 30
 
 GENDER_ANY = 'Any'
+PROMOTED = 'Y'
 NOT_PROMOTED = 'N'
 
 # This is where stage.sh will pick them up from
@@ -115,8 +116,10 @@ def generate_user_items(out_users_filename, out_items_filename, in_users_filenam
                                                             'promoted': 'PROMOTED'})
     # Since GENDER column requires a value for all rows, default all nulls to "Any"
     products_dataset_df['GENDER']=products_dataset_df['GENDER'].fillna(GENDER_ANY)
-    products_dataset_df['PROMOTED'] = products_dataset_df['PROMOTED'].astype(str).fillna(False)
-    products_dataset_df['PROMOTED'] = products_dataset_df['PROMOTED'].replace({True: 'Y', False: 'N'})
+    # Convert all "True" values to "Y"
+    products_dataset_df.loc[products_dataset_df['PROMOTED'] == True, 'PROMOTED'] = PROMOTED
+    # Fill in any null values with "N"
+    products_dataset_df['PROMOTED']=products_dataset_df['PROMOTED'].fillna(NOT_PROMOTED)
     products_dataset_df.to_csv(out_items_filename, index=False)
 
     users_dataset_df = users_df[['id', 'age', 'gender']]
