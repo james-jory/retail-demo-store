@@ -310,7 +310,7 @@ dataset_group_confs = [
             },
             {
                 'name': 'retaildemostore-popular-items',
-                'recipe': 'arn:aws:personalize:::recipe/aws-user-popularity-count',
+                'recipe': 'arn:aws:personalize:::recipe/aws-popularity-count',
                 'eventType': 'View',
                 'campaign': {
                     'name': 'retaildemostore-popular-items',
@@ -338,8 +338,7 @@ dataset_group_confs = [
             },
             {
                 'name': 'retaildemostore-personalized-ranking',
-                'recipe': 'arn:aws:personalize:::recipe/aws-personalized-ranking',
-                'eventType': 'View',
+                'recipe': 'arn:aws:personalize:::recipe/aws-personalized-ranking-v2',
                 'solutionConfig': {
                     'eventsConfig': {
                         'eventParametersList': [
